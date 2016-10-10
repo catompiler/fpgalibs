@@ -15,7 +15,7 @@ initial begin
 end
 
 
-assign ovf = (end_up_count | end_down_count);// & clk;
+assign ovf = (end_up_count | end_down_count) & ena;// & clk;
 assign out = cnt;
 
 assign enable_wires[0] = ena;
