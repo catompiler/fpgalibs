@@ -1,6 +1,7 @@
 `include "counter/simple_upcounter.v"
 `include "counter/binary_upcounter.v"
 `include "counter/simple_binary_upcounter.v"
+`include "shift_reg/simple_shift_reg.v"
 `include "shift_reg/shift_reg.v"
 `include "majority/majority3.v"
 
@@ -75,13 +76,6 @@ wire[3:0] spec_bits = {1'b1, data_parity, 1'b0, 1'b1};
 // Данные младшим битом вперёд для передачи.
 wire[7:0] reversed_data;
 //
-// Чётность.
-//
-// Значение чётности данных по принципу "чётный".
-wire data_parity_even = ^data;
-// Значение чётности данных в зависимости от выбранного режима.
-wire data_parity = (~parity_type & data_parity_even) | (parity_type & ~data_parity_even);
-//
 // Генерация частоты передатчика.
 //
 // Сброс генератора частоты.
@@ -99,6 +93,15 @@ wire shift_reg_load = start & ~running;
 wire shift_reg_ena = ena & baud_tick & transmit_data;
 // Выход сдвигового регистра.
 wire shift_reg_out;
+// Выход данных сдвигового регистра.
+wire[7:0] shift_reg_data_out;
+//
+// Чётность.
+//
+// Значение чётности данных по принципу "чётный".
+wire data_parity_even = ^shift_reg_data_out;
+// Значение чётности данных в зависимости от выбранного режима.
+wire data_parity = (~parity_type & data_parity_even) | (parity_type & ~data_parity_even);
 //
 //
 // Инициализация.
@@ -128,8 +131,8 @@ assign tx = (transmit_data & shift_reg_out) | (~transmit_data & spec_bits[state[
 //
 // Сдвиговый регистр данных для передачи.
 shift_reg #(8) sh_reg(.clk(clk), .rst(rst), .ena(shift_reg_ena),
-                      .load(shift_reg_load), .load_data(reversed_data), .in(1'b0),
-                      .out_data(), .out(shift_reg_out));
+                      .load(shift_reg_load), .load_data(reversed_data), .in(shift_reg_out),
+                      .out_data(shift_reg_data_out), .out(shift_reg_out));
 //
 // Делитель входной частоты на 16.
 // Синхронизируется по ближайшему тику генератора частоты после старта передачи.
@@ -308,9 +311,8 @@ assign frame_err = frame_err_flag;
 // Модули.
 //
 // Сдвиговый регистр выборки.
-shift_reg #(16) samples_sh_reg(.clk(clk), .rst(rst), .ena(samples_sh_reg_ena),
-                               .load(1'b0), .load_data(16'h0), .in(rx),
-                               .out_data(samples), .out());
+simple_shift_reg #(16) samples_sh_reg(.clk(clk), .rst(rst), .ena(samples_sh_reg_ena),
+                                      .in(rx), .out_data(samples), .out());
 //
 // Генератор частоты следования бит (делитель на 16).
 // Синхронизируется по текущей позиции при получении стартового бита.
@@ -318,9 +320,8 @@ binary_upcounter #(4) baud_gen(.clk(clk), .rst(rst), .ena(baud_gen_ena),
                                .value(4'hc), .load(start_bit), .out(), .ovf(baud_tick));
 //
 // Сдвиговй регистр бит данных.
-shift_reg #(8) data_sh_reg(.clk(clk), .rst(rst), .ena(data_sh_reg_ena),
-                           .load(1'b0), .load_data(8'h0), .in(sampled_bit),
-                           .out_data(reversed_data), .out());
+simple_shift_reg #(8) data_sh_reg(.clk(clk), .rst(rst), .ena(data_sh_reg_ena),
+                                  .in(sampled_bit), .out_data(reversed_data), .out());
 //
 //
 always @(posedge clk) begin
