@@ -140,7 +140,7 @@ simple_binary_upcounter #(4) baud_gen(.clk(clk), .rst(baud_gen_rst), .ena(baud_g
                                       .out(), .ovf(baud_tick));
 //
 //
-always @(posedge clk) begin
+always @(posedge clk or negedge rst) begin
     if(!rst) begin
         state <= 4'b0;
     end else begin
@@ -324,7 +324,7 @@ simple_shift_reg #(8) data_sh_reg(.clk(clk), .rst(rst), .ena(data_sh_reg_ena),
                                   .in(sampled_bit), .out_data(reversed_data), .out());
 //
 //
-always @(posedge clk) begin
+always @(posedge clk or negedge rst) begin
     if(!rst) begin
         state <= 4'b0;
         parity_err_flag <= 1'b0;
